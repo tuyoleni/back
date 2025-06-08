@@ -1,0 +1,36 @@
+{
+  "name": "back",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "Simeon Tuyoleni",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@nestjs/common": "^11.1.3",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.3",
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/platform-express": "^11.1.3",
+    "@nestjs/typeorm": "^11.0.0",
+    "@types/passport-jwt": "^4.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "ethers": "^6.14.3",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.16.0",
+    "typeorm": "^0.3.24"
+  }
+}
