@@ -16,18 +16,21 @@ const posts_service_1 = require("./posts.service");
 const posts_controller_1 = require("./posts.controller");
 const user_entity_1 = require("../users/entities/user.entity");
 const users_module_1 = require("../users/users.module");
+const hashtag_entity_1 = require("./entities/hashtag.entity");
+const hashtags_service_1 = require("./hashtags.service");
+const hashtags_controller_1 = require("./hashtags.controller");
 let PostsModule = class PostsModule {
 };
 exports.PostsModule = PostsModule;
 exports.PostsModule = PostsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([post_entity_1.Post, comment_entity_1.Comment, like_entity_1.Like, user_entity_1.User]),
+            typeorm_1.TypeOrmModule.forFeature([post_entity_1.Post, comment_entity_1.Comment, like_entity_1.Like, user_entity_1.User, hashtag_entity_1.Hashtag]),
             users_module_1.UsersModule,
         ],
-        providers: [posts_service_1.PostsService],
-        controllers: [posts_controller_1.PostsController],
-        exports: [posts_service_1.PostsService],
+        controllers: [posts_controller_1.PostsController, hashtags_controller_1.HashtagsController],
+        providers: [posts_service_1.PostsService, hashtags_service_1.HashtagsService],
+        exports: [posts_service_1.PostsService, hashtags_service_1.HashtagsService],
     })
 ], PostsModule);
 //# sourceMappingURL=posts.module.js.map

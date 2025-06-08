@@ -6,18 +6,24 @@ const common_1 = require("@nestjs/common");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors({
-        origin: ['http://localhost:8081', 'http://127.0.0.1:8081'],
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+        origin: ['http://localhost:8080', 'http://127.0.0.1:8080'],
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         credentials: true,
-        preflightContinue: false,
-        optionsSuccessStatus: 204,
+    });
+    app.use((req, res, next) => {
+        console.log(`${req.method} ${req.url}`);
+        console.log('Headers:', req.headers);
+        next();
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         transform: true,
+        forbidNonWhitelisted: false,
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
     }));
-    await app.listen(8081);
+    await app.listen(3000);
     console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

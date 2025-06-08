@@ -1,3 +1,4 @@
+import { Post } from '../../posts/entities/post.entity';
 export declare class User {
     walletAddress: string;
     username: string;
@@ -10,6 +11,7 @@ export declare class User {
     followingCount: number;
     likeCount: number;
     commentCount: number;
+    posts: Post[];
     createdAt: Date;
     updatedAt: Date;
 }

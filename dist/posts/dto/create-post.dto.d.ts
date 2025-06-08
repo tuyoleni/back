@@ -4,4 +4,6 @@ export declare class CreatePostDto {
     tags?: string[];
     imageUrl?: string;
     type?: 'text' | 'image' | 'image-text';
+    walletAddress: string;
+    hashtags?: string[];
 }

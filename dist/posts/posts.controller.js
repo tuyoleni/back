@@ -15,85 +15,96 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostsController = void 0;
 const common_1 = require("@nestjs/common");
 const posts_service_1 = require("./posts.service");
-const create_post_dto_1 = require("../posts/dto/create-post.dto");
-const create_comment_dto_1 = require("../posts/dto/create-comment.dto");
+const create_post_dto_1 = require("./dto/create-post.dto");
+const create_comment_dto_1 = require("./dto/create-comment.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let PostsController = class PostsController {
     constructor(postsService) {
         this.postsService = postsService;
     }
-    create(createPostDto, req) {
-        return this.postsService.create(createPostDto, req.user.walletAddress);
-    }
-    findAll() {
-        return this.postsService.findAll();
-    }
-    findOne(id, req) {
+    async findAll(req, hashtag) {
         var _a;
-        return this.postsService.getPost(id, ((_a = req.user) === null || _a === void 0 ? void 0 : _a.walletAddress) || '');
+        return this.postsService.findAll((_a = req.user) === null || _a === void 0 ? void 0 : _a.walletAddress, hashtag);
     }
-    addComment(id, createCommentDto, req) {
-        return this.postsService.addComment(id, createCommentDto, req.user.walletAddress);
+    async findOne(id, req) {
+        var _a;
+        return this.postsService.findOne(id, (_a = req.user) === null || _a === void 0 ? void 0 : _a.walletAddress);
     }
-    toggleLike(id, req) {
+    async create(createPostDto) {
+        return this.postsService.create(createPostDto);
+    }
+    async archive(id, req) {
+        return this.postsService.archive(id, req.user.walletAddress);
+    }
+    async delete(id, req) {
+        return this.postsService.delete(id, req.user.walletAddress);
+    }
+    async addComment(id, createCommentDto) {
+        return this.postsService.addComment(id, createCommentDto);
+    }
+    async toggleLike(id, req) {
         return this.postsService.toggleLike(id, req.user.walletAddress);
-    }
-    remove(id, req) {
-        return this.postsService.remove(id, req.user.walletAddress);
     }
 };
 exports.PostsController = PostsController;
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_post_dto_1.CreatePostDto, Object]),
-    __metadata("design:returntype", void 0)
-], PostsController.prototype, "create", null);
-__decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('hashtag')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
 ], PostsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PostsController.prototype, "findOne", null);
 __decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_post_dto_1.CreatePostDto]),
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Put)(':id/archive'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "archive", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "delete", null);
+__decorate([
     (0, common_1.Post)(':id/comments'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
-    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, create_comment_dto_1.CreateCommentDto, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [String, create_comment_dto_1.CreateCommentDto]),
+    __metadata("design:returntype", Promise)
 ], PostsController.prototype, "addComment", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)(':id/like'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], PostsController.prototype, "toggleLike", null);
-__decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], PostsController.prototype, "remove", null);
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "toggleLike", null);
 exports.PostsController = PostsController = __decorate([
     (0, common_1.Controller)('posts'),
     __metadata("design:paramtypes", [posts_service_1.PostsService])

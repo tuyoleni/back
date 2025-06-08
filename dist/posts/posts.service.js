@@ -20,95 +20,133 @@ const post_entity_1 = require("./entities/post.entity");
 const comment_entity_1 = require("./entities/comment.entity");
 const like_entity_1 = require("./entities/like.entity");
 const user_entity_1 = require("../users/entities/user.entity");
+const hashtags_service_1 = require("./hashtags.service");
 let PostsService = class PostsService {
-    constructor(postsRepository, commentsRepository, likesRepository, usersRepository) {
+    constructor(postsRepository, commentsRepository, likesRepository, usersRepository, hashtagsService) {
         this.postsRepository = postsRepository;
         this.commentsRepository = commentsRepository;
         this.likesRepository = likesRepository;
         this.usersRepository = usersRepository;
+        this.hashtagsService = hashtagsService;
     }
-    async create(createPostDto, walletAddress) {
-        const user = await this.usersRepository.findOne({ where: { walletAddress } });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
+    async findAll(walletAddress, hashtag) {
+        const queryBuilder = this.postsRepository.createQueryBuilder('post')
+            .leftJoinAndSelect('post.author', 'author')
+            .leftJoinAndSelect('post.comments', 'comments')
+            .leftJoinAndSelect('post.likes', 'likes')
+            .leftJoinAndSelect('post.hashtags', 'hashtags')
+            .where('post.isArchived = :isArchived', { isArchived: false });
+        if (hashtag) {
+            queryBuilder
+                .innerJoin('post.hashtags', 'hashtag')
+                .andWhere('hashtag.name = :hashtag', { hashtag: hashtag.toLowerCase() });
         }
-        const post = this.postsRepository.create(Object.assign(Object.assign({}, createPostDto), { author: user }));
-        return this.postsRepository.save(post);
+        const posts = await queryBuilder
+            .orderBy('post.createdAt', 'DESC')
+            .getMany();
+        return posts.map(post => (Object.assign(Object.assign({}, post), { isLiked: post.likes.some(like => like.userWalletAddress === walletAddress) })));
     }
-    async findAll() {
-        return this.postsRepository.find({
-            relations: ['author', 'comments', 'likes'],
-            order: {
-                createdAt: 'DESC',
-            },
-        });
-    }
-    async getPost(id, walletAddress) {
+    async findOne(id, walletAddress) {
         const post = await this.postsRepository.findOne({
-            where: { id },
-            relations: ['likes', 'comments', 'comments.author'],
+            where: { id, isArchived: false },
+            relations: ['author', 'comments', 'likes', 'hashtags'],
         });
         if (!post) {
             throw new common_1.NotFoundException(`Post with ID ${id} not found`);
         }
-        const isLiked = await this.likesRepository.findOne({
-            where: {
-                post: { id },
-                user: { walletAddress },
-            },
-        });
-        return Object.assign(Object.assign({}, post), { isLiked: !!isLiked });
+        return Object.assign(Object.assign({}, post), { isLiked: post.likes.some(like => like.userWalletAddress === walletAddress) });
     }
-    async addComment(id, createCommentDto, walletAddress) {
-        const post = await this.postsRepository.findOne({ where: { id } });
-        if (!post) {
-            throw new common_1.NotFoundException('Post not found');
-        }
-        const user = await this.usersRepository.findOne({ where: { walletAddress } });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
-        }
-        const comment = this.commentsRepository.create(Object.assign(Object.assign({}, createCommentDto), { post, author: user }));
-        return this.commentsRepository.save(comment);
-    }
-    async toggleLike(id, walletAddress) {
-        const post = await this.postsRepository.findOne({ where: { id } });
-        if (!post) {
-            throw new common_1.NotFoundException('Post not found');
-        }
-        const user = await this.usersRepository.findOne({ where: { walletAddress } });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
-        }
-        const existingLike = await this.likesRepository.findOne({
-            where: {
-                post: { id },
-                user: { walletAddress },
-            },
+    async create(createPostDto) {
+        let author = await this.usersRepository.findOne({
+            where: { walletAddress: createPostDto.walletAddress },
         });
-        if (existingLike) {
-            await this.likesRepository.remove(existingLike);
-            return { liked: false };
+        if (!author) {
+            author = this.usersRepository.create({
+                walletAddress: createPostDto.walletAddress,
+                username: createPostDto.walletAddress.slice(0, 8),
+            });
+            author = await this.usersRepository.save(author);
         }
-        const like = this.likesRepository.create({
-            post,
-            user,
-        });
-        await this.likesRepository.save(like);
-        return { liked: true };
+        const hashtagRegex = /#(\w+)/g;
+        const hashtagMatches = createPostDto.content.match(hashtagRegex) || [];
+        const hashtagNames = hashtagMatches.map(tag => tag.slice(1).toLowerCase());
+        const hashtags = await Promise.all(hashtagNames.map(name => this.hashtagsService.findOrCreate(name)));
+        const post = this.postsRepository.create(Object.assign(Object.assign({}, createPostDto), { author,
+            hashtags }));
+        return this.postsRepository.save(post);
     }
-    async remove(id, walletAddress) {
+    async archive(id, walletAddress) {
         const post = await this.postsRepository.findOne({
             where: { id },
-            relations: ['author'],
+            relations: ['author', 'hashtags'],
         });
         if (!post) {
-            throw new common_1.NotFoundException('Post not found');
+            throw new common_1.NotFoundException(`Post with ID ${id} not found`);
         }
-        if (post.author.walletAddress !== walletAddress) {
-            throw new common_1.NotFoundException('Not authorized to delete this post');
+        if (post.authorWalletAddress !== walletAddress) {
+            throw new common_1.UnauthorizedException('You can only archive your own posts');
         }
+        await Promise.all(post.hashtags.map(hashtag => this.hashtagsService.decrementUsage(hashtag.name)));
+        post.isArchived = true;
+        return this.postsRepository.save(post);
+    }
+    async delete(id, walletAddress) {
+        const post = await this.postsRepository.findOne({
+            where: { id },
+            relations: ['author', 'hashtags'],
+        });
+        if (!post) {
+            throw new common_1.NotFoundException(`Post with ID ${id} not found`);
+        }
+        if (post.authorWalletAddress !== walletAddress) {
+            throw new common_1.UnauthorizedException('You can only delete your own posts');
+        }
+        await Promise.all(post.hashtags.map(hashtag => this.hashtagsService.decrementUsage(hashtag.name)));
         await this.postsRepository.remove(post);
+    }
+    async addComment(postId, createCommentDto) {
+        const post = await this.postsRepository.findOne({
+            where: { id: postId, isArchived: false },
+        });
+        if (!post) {
+            throw new common_1.NotFoundException(`Post with ID ${postId} not found`);
+        }
+        let author = await this.usersRepository.findOne({
+            where: { walletAddress: createCommentDto.walletAddress },
+        });
+        if (!author) {
+            author = this.usersRepository.create({
+                walletAddress: createCommentDto.walletAddress,
+                username: createCommentDto.walletAddress.slice(0, 8),
+            });
+            author = await this.usersRepository.save(author);
+        }
+        const comment = this.commentsRepository.create(Object.assign(Object.assign({}, createCommentDto), { post,
+            author }));
+        return this.commentsRepository.save(comment);
+    }
+    async toggleLike(postId, walletAddress) {
+        const post = await this.postsRepository.findOne({
+            where: { id: postId, isArchived: false },
+            relations: ['likes'],
+        });
+        if (!post) {
+            throw new common_1.NotFoundException(`Post with ID ${postId} not found`);
+        }
+        const existingLike = post.likes.find(like => like.userWalletAddress === walletAddress);
+        if (existingLike) {
+            await this.likesRepository.remove(existingLike);
+            post.likes = post.likes.filter(like => like.id !== existingLike.id);
+        }
+        else {
+            const like = this.likesRepository.create({
+                post,
+                userWalletAddress: walletAddress,
+            });
+            const savedLike = await this.likesRepository.save(like);
+            post.likes.push(savedLike);
+        }
+        return post;
     }
 };
 exports.PostsService = PostsService;
@@ -121,6 +159,7 @@ exports.PostsService = PostsService = __decorate([
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        hashtags_service_1.HashtagsService])
 ], PostsService);
 //# sourceMappingURL=posts.service.js.map

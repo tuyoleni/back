@@ -14,6 +14,7 @@ const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../users/entities/user.entity");
 const comment_entity_1 = require("./comment.entity");
 const like_entity_1 = require("./like.entity");
+const hashtag_entity_1 = require("./hashtag.entity");
 let Post = class Post {
 };
 exports.Post = Post;
@@ -26,7 +27,7 @@ __decorate([
     __metadata("design:type", String)
 ], Post.prototype, "content", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User),
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.posts),
     __metadata("design:type", user_entity_1.User)
 ], Post.prototype, "author", void 0);
 __decorate([
@@ -41,6 +42,19 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => like_entity_1.Like, like => like.post),
     __metadata("design:type", Array)
 ], Post.prototype, "likes", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => hashtag_entity_1.Hashtag, hashtag => hashtag.posts),
+    (0, typeorm_1.JoinTable)({
+        name: 'post_hashtags',
+        joinColumn: { name: 'post_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'hashtag_id', referencedColumnName: 'id' },
+    }),
+    __metadata("design:type", Array)
+], Post.prototype, "hashtags", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], Post.prototype, "isArchived", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
